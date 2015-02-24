@@ -11,6 +11,7 @@ this file and include it in basic-server.js so that it actually works.
 *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html.
 
 **************************************************************/
+var fs = require('fs');
 
 module.exports = {};
 
@@ -41,7 +42,7 @@ module.exports.requestHandler = function(request, response) {
   //
   // You will need to change this if you are sending something
   // other than plain text, like JSON or HTML.
-  headers['Content-Type'] = "text/plain";
+  headers['Content-Type'] = "application/json";
 
   // .writeHead() writes to the request line and headers of the response,
   // which includes the status and all headers.
@@ -54,7 +55,60 @@ module.exports.requestHandler = function(request, response) {
   //
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
-  response.end("Hello, World!");
+
+  if(request.method === 'POST'){
+    var msg = '';
+    request.on('data', function(chunk){
+      msg += chunk;
+    });
+
+    request.on('end', function(){
+
+      // open up our data file,
+      // convert data into javascript object
+      // push to msg to results key value
+      // restringify the data object
+      // save to file
+
+      fs.readFile('/tmp/test2', {encoding: 'utf8'}, function(err, data){
+        if(err){ console.log('could not open test2'); return;}
+
+        console.log('write that file yo!');
+        var file = JSON.parse(data);
+        if( !file.results ){
+          file.results = [];
+        }
+        file.results.push(msg);
+        fs.writeFile("/tmp/test2", JSON.stringify(file), function(err) {
+          if(err) {
+              console.log(err);
+          } else {
+              console.log("The file was saved!");
+          }
+        });
+
+      });
+
+      // write the message in our data file
+      // console.log(body);
+      response.end('message posted');
+    });
+
+  }else if(request.method === 'GET' || 'OPTIONS'){
+    // read the messages from our data file and return them
+    fs.readFile('/tmp/test2',{encoding: 'utf8'}, function(err, data){
+      if(!err) {
+        console.log('data', data);
+        response.end(JSON.stringify(data));
+      }else{
+        console.log('shhheeeeit');
+        fs.writeFile("/tmp/test2", JSON.stringify({}), function(err){
+          if(err){ console.log("did not write new file")}
+        });
+      }
+    });
+  }
+
 };
 
 // These headers will allow Cross-Origin Resource Sharing (CORS).
